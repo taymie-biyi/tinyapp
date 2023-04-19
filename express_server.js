@@ -38,14 +38,6 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-//route to display each URL and its shortened form based on its id
-app.get("/urls/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id];
-  const templateVars = { id: req.params.id, longURL: longURL };
-  res.render("urls_show", templateVars);
-  // res.redirect(longURL);
-});
-
 //POST route to receive form and update url db
 app.post("/urls", (req, res) => {
   // console.log(req.body); // Log the POST request body to the console
@@ -54,6 +46,14 @@ app.post("/urls", (req, res) => {
   // console.log(req.body);
   urlDatabase[id] = req.body.longURL;
   res.redirect(`/urls/${id}`);  //redirect to to new url
+});
+
+//route to display each URL and its shortened form based on its id
+app.get("/urls/:id", (req, res) => {
+  const longURL = urlDatabase[req.params.id];
+  const templateVars = { id: req.params.id, longURL: longURL };
+  res.render("urls_show", templateVars);
+  // res.redirect(longURL);
 });
 
 //redirect short urls
@@ -68,6 +68,14 @@ app.get("/u/:id", (req, res) => {
   
   res.redirect(longURL);
 });
+
+//POST request to delete url
+//POST route to receive form and update url db
+app.post("/urls/:id/delete", (req, res) => {
+  delete urlDatabase[req.params.id];
+  res.redirect("/urls");
+});
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
