@@ -14,8 +14,26 @@ app.use(cookieParser());
 
 //database object containing urls
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b2xVn2: {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "Sf5gyU"
+  }, 
+  s9m5xK: {
+    longURL: "http://www.google.com",
+    userID: "F6h75t"
+  },
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
+  h8HG84: {
+    longURL: "https://www.instagram.com",
+    userID: "Sf5gyU"
+  }
 };
 
 //database of users
@@ -51,6 +69,17 @@ const findUserByEmail = (email, usersDb) => {
     }
   }
   return false;
+};
+
+//check for current user's urls
+const urlsForUser = (id) => {
+  const userUrls = {};
+  for (let urlId in urlDatabase) {
+    if (urlDatabase[urlId].userID === id) {
+      userUrls[urlId] = urlDatabase[urlId].longURL;
+    }
+  }
+  return userUrls;
 };
 
 //ADD ROUTES
@@ -146,9 +175,10 @@ app.post("/logout", (req, res) => {
 //route to show all the urls in db
 app.get("/urls", (req, res) => {
   //check if user is logged in
-  const loggedInUser = usersDb[req.cookies["user_id"]];
-  
-  const templateVars = { urls: urlDatabase, user: loggedInUser };
+  const currentUser = req.cookies["user_id"];
+  const loggedInUser = usersDb[currentUser];
+
+  const templateVars = { urls: urlsForUser(currentUser), user: loggedInUser };
   res.render("urls_index", templateVars);
 });
 
@@ -162,8 +192,7 @@ app.post("/urls", (req, res) => {
 
   //generate random id
   const id = generateRandomString();
-  // console.log(req.body);
-  urlDatabase[id] = req.body.longURL;
+  urlDatabase[id].longURL = req.body.longURL;
   res.redirect(`/urls/${id}`);  //redirect to to new url
 });
 
@@ -185,21 +214,38 @@ app.get("/urls/:id", (req, res) => {
     return;
   }
 
-  const loggedInUser = usersDb[req.cookies["user_id"]];
+  const currentUser = req.cookies["user_id"];
+  const loggedInUser = usersDb[currentUser];
   if (!loggedInUser) {
     res.redirect("/login");
     return;
   }
 
-  const longURL = urlDatabase[req.params.id];
+  if (urlDatabase[req.params.id].userID !== currentUser) {
+    res.send("Please log in to access url");
+    return;
+  }
+  const longURL = urlDatabase[req.params.id].longURL;
   const templateVars = { id: req.params.id, longURL: longURL, user: loggedInUser };
   res.render("urls_show", templateVars);
 });
 
 // POST request to update longURL
 app.post("/urls/:id/", (req, res) => {
-  if (req.body.longURL && urlDatabase[req.params.id] !== req.body.longURL) {
-    urlDatabase[req.params.id] = req.body.longURL;
+  const currentUser = req.cookies["user_id"]
+  const loggedInUser = usersDb[currentUser];
+  if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
+    res.send("Please log in to make changes to url");
+    return;
+  }
+
+  if (!urlDatabase[req.params.id]) {
+    res.status(302).send('No url with provided id in our database');
+    return;
+  }
+
+  if (req.body.longURL && urlDatabase[req.params.id].longURL !== req.body.longURL) {
+    urlDatabase[req.params.id].longURL = req.body.longURL;
   }
   res.redirect("/urls");
 });
@@ -212,16 +258,22 @@ app.get("/u/:id", (req, res) => {
     res.status(302).send('No url with provided id in our database');
     return;
   }
-  const longURL = urlDatabase[req.params.id];
+  const longURL = urlDatabase[req.params.id].longURL;
   
   res.redirect(longURL, {user: loggedInUser});
 });
 
 //POST request to delete url
 app.post("/urls/:id/delete", (req, res) => {
-  const loggedInUser = usersDb[req.cookies["user_id"]];
-  if (!loggedInUser) {
-    res.redirect("/login");
+  const currentUser = req.cookies["user_id"]
+  const loggedInUser = usersDb[currentUser];
+  if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
+    res.send("Please log in to make changes to url");
+    return;
+  }
+
+  if (!urlDatabase[req.params.id]) {
+    res.status(302).send('No url with provided id in our database');
     return;
   }
 
