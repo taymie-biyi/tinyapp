@@ -19,9 +19,9 @@
       </div>
     </div>
     <div class="row">
-      <% if (username) { %>
-          <div class="col-auto mt-2">
-          Logged in as: <%= username %>!!
+      <% if (user) { %>
+        <div class="col-auto mt-2">
+          Logged in as: <%= user.email %>!!
         </div>
           <form method="POST" action="/logout" class="form-inline">
             <button class="btn btn-outline-dark my-2 my-sm-0" value="Logout" type="submit">Logout</button>
@@ -30,8 +30,12 @@
         <div class="col-auto">
       <% } else { %>
         <form method="POST" action="/login" class="form-inline">
-          <input type="text" name="username" class="form-control mr-sm-2" placeholder="Username">
-          <button class="btn btn-outline-dark my-2 mr-4" type="submit">Login</button>
+          <input type="text" name="email" class="form-control mr-sm-2" placeholder="Email">
+          <input type="password" name="password" class="form-control mr-sm-2" placeholder="Password">
+          <button class="btn btn-outline-dark mr-2" type="submit">Login</button>
+        </form>
+        <form method="GET" action="/register" class="form-inline">
+          <button class="btn btn-outline-dark mr-4" type="submit">Register</button>
         </form>
       <% } %>      
     </div>
