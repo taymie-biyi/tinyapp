@@ -180,6 +180,11 @@ app.get("/urls/new", (req, res) => {
 
 //route to display each URL and its shortened form based on its id
 app.get("/urls/:id", (req, res) => {
+  if (!urlDatabase[req.params.id]) {
+    res.status(302).send('No url with provided id in our database');
+    return;
+  }
+
   const loggedInUser = usersDb[req.cookies["user_id"]];
   if (!loggedInUser) {
     res.redirect("/login");
@@ -201,15 +206,10 @@ app.post("/urls/:id/", (req, res) => {
 
 //redirect short urls
 app.get("/u/:id", (req, res) => {
-  const loggedInUser = usersDb[req.cookies["user_id"]];
-  if (!loggedInUser) {
-    res.redirect("/login");
-    return;
-  }
   
   //Edge case - if id doesn't exist
   if (!urlDatabase[req.params.id]) {
-    res.status(302).send('id does not exist');
+    res.status(302).send('No url with provided id in our database');
     return;
   }
   const longURL = urlDatabase[req.params.id];
