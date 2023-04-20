@@ -70,9 +70,16 @@ app.get("/u/:id", (req, res) => {
 });
 
 //POST request to delete url
-//POST route to receive form and update url db
 app.post("/urls/:id/delete", (req, res) => {
   delete urlDatabase[req.params.id];
+  res.redirect("/urls/");
+});
+
+// POST request to update longURL
+app.post("/urls/:id/", (req, res) => {
+  if (req.body.longURL && urlDatabase[req.params.id] !== req.body.longURL) {
+    urlDatabase[req.params.id] = req.body.longURL;
+  }
   res.redirect("/urls");
 });
 
