@@ -57,11 +57,18 @@ const findUserByEmail = (email, usersDb) => {
 
 //get register
 app.get("/register", (req, res) => {
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (loggedInUser) {
+    res.redirect("/urls");
+    return;
+  }
+  
   res.render("register", {user: null});
 });
 
 //POST request to register
 app.post("/register", (req, res) => {
+  
   const { email, password } = req.body;
 
   //error message if email/password is empty
@@ -95,11 +102,17 @@ app.post("/register", (req, res) => {
 
 //get login
 app.get("/login", (req, res) => {
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (loggedInUser) {
+    res.redirect("/urls");
+    return;
+  }
   res.render("login", {user: null});
 });
 
 // POST request to set cookie for username & login
 app.post("/login", (req, res) => {
+  //check if user is logged in
   const { email, password } = req.body;
 
   //error message if email/password is empty
@@ -133,17 +146,21 @@ app.post("/logout", (req, res) => {
 //route to show all the urls in db
 app.get("/urls", (req, res) => {
   //check if user is logged in
-  const userId = req.cookies["user_id"];
-  const currentUser = usersDb[userId];
-
-  const templateVars = { urls: urlDatabase, user: currentUser };
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  
+  const templateVars = { urls: urlDatabase, user: loggedInUser };
   res.render("urls_index", templateVars);
 });
 
 //POST route to receive form and update url db
 app.post("/urls", (req, res) => {
-  // console.log(req.body); // Log the POST request body to the console
-  // res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (!loggedInUser) {
+    res.send("Please login or register to shorten URL!!");
+    return;
+  }
+
+  //generate random id
   const id = generateRandomString();
   // console.log(req.body);
   urlDatabase[id] = req.body.longURL;
@@ -152,13 +169,25 @@ app.post("/urls", (req, res) => {
 
 //get request to create a submission form for new url
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new", {user: null});
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (!loggedInUser) {
+    res.redirect("/login");
+    return;
+  }
+  
+  res.render("urls_new", {user: loggedInUser});
 });
 
 //route to display each URL and its shortened form based on its id
 app.get("/urls/:id", (req, res) => {
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (!loggedInUser) {
+    res.redirect("/login");
+    return;
+  }
+
   const longURL = urlDatabase[req.params.id];
-  const templateVars = { id: req.params.id, longURL: longURL, user: null };
+  const templateVars = { id: req.params.id, longURL: longURL, user: loggedInUser };
   res.render("urls_show", templateVars);
 });
 
@@ -172,7 +201,12 @@ app.post("/urls/:id/", (req, res) => {
 
 //redirect short urls
 app.get("/u/:id", (req, res) => {
-
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (!loggedInUser) {
+    res.redirect("/login");
+    return;
+  }
+  
   //Edge case - if id doesn't exist
   if (!urlDatabase[req.params.id]) {
     res.status(302).send('id does not exist');
@@ -180,11 +214,17 @@ app.get("/u/:id", (req, res) => {
   }
   const longURL = urlDatabase[req.params.id];
   
-  res.redirect(longURL);
+  res.redirect(longURL, {user: loggedInUser});
 });
 
 //POST request to delete url
 app.post("/urls/:id/delete", (req, res) => {
+  const loggedInUser = usersDb[req.cookies["user_id"]];
+  if (!loggedInUser) {
+    res.redirect("/login");
+    return;
+  }
+
   delete urlDatabase[req.params.id];
   res.redirect("/urls/");
 });
