@@ -54,12 +54,18 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
 
+  //error message if email/password is empty
+  if (!email || !password) {
+    res.status(400).send("Please enter both email and password to register");
+    return;
+  }
+
   // validation
   // Check if user exists? => look for that email
   
   if (findUserByEmail(email, usersDb)) {
     //user exist
-    res.status(403).send('User already exist');
+    res.status(400).send('Email address already in use!');
     return;
   }
   
@@ -77,13 +83,26 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
+//check if user exists function
+const findUserByEmail = (email, usersDb) => {
+  for (let userId in usersDb) {
+    if (usersDb[userId].email === email) {
+      return usersDb[userId];
+    }
+  }
+  return false;
+};
+
 // POST request to set cookie for username & login
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
+
+  //error message if email/password is empty
   if (!email || !password) {
-    res.status(401).send("Please enter both email and password to login");
+    res.status(400).send("Please enter both email and password to login");
     return;
   }
+
   //validation if user exist
   const user = findUserByEmail(email, usersDb);
 
@@ -164,16 +183,6 @@ app.post("/urls/:id/delete", (req, res) => {
   delete urlDatabase[req.params.id];
   res.redirect("/urls/");
 });
-
-//check if user exists function
-const findUserByEmail = (email, usersDb) => {
-  for (let userId in usersDb) {
-    if (usersDb[userId].email === email) {
-      return usersDb[userId];
-    }
-  }
-  return false;
-};
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
