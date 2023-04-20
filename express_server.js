@@ -43,6 +43,16 @@ const generateRandomString = () => {
   return results;
 };
 
+//check if user exists function
+const findUserByEmail = (email, usersDb) => {
+  for (let userId in usersDb) {
+    if (usersDb[userId].email === email) {
+      return usersDb[userId];
+    }
+  }
+  return false;
+};
+
 //ADD ROUTES
 
 //get register
@@ -83,15 +93,10 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
-//check if user exists function
-const findUserByEmail = (email, usersDb) => {
-  for (let userId in usersDb) {
-    if (usersDb[userId].email === email) {
-      return usersDb[userId];
-    }
-  }
-  return false;
-};
+//get login
+app.get("/login", (req, res) => {
+  res.render("login", {user: null});
+});
 
 // POST request to set cookie for username & login
 app.post("/login", (req, res) => {

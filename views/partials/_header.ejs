@@ -29,9 +29,7 @@
         </div>
         <div class="col-auto">
       <% } else { %>
-        <form method="POST" action="/login" class="form-inline">
-          <input type="text" name="email" class="form-control mr-sm-2" placeholder="Email" required>
-          <input type="password" name="password" class="form-control mr-sm-2" placeholder="Password" required>
+        <form method="GET" action="/login" class="form-inline">
           <button class="btn btn-outline-dark mr-2" type="submit">Login</button>
         </form>
         <form method="GET" action="/register" class="form-inline">
