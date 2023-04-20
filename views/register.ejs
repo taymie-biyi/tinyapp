@@ -19,15 +19,15 @@
   <body>
     <%- include('partials/_header') %>
     <main style="margin: 1em;">
-      <div class="jumbotron col-3 my-5 mx-5 py-3">
-        <h3>Register</h3>
+      <div class="jumbotron col-md-3 my-5 mx-5 py-3">
+        <h3>Create Account</h3>
         <form method="POST" action="/register"  class="mb-2 mt-3">
           <div class="form-group">
-            <label for="email">Email address</label>
+            <label for="email">Email address:</label>
             <input type="email" class="form-control"  name="email" id="email" placeholder="Enter email" required>
           </div>
           <div class="form-group">
-            <label for="password">Password</label>
+            <label for="password">Password:</label>
             <input type="password" class="form-control" name="password" id="password" placeholder="Password" required>
           </div>
           <button type="submit" class="btn btn-primary">Register</button>

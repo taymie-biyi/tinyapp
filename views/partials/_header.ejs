@@ -29,12 +29,10 @@
         </div>
         <div class="col-auto">
       <% } else { %>
-        <form method="GET" action="/login" class="form-inline">
-          <button class="btn btn-outline-dark mr-2" type="submit">Login</button>
-        </form>
-        <form method="GET" action="/register" class="form-inline">
-          <button class="btn btn-outline-dark mr-4" type="submit">Register</button>
-        </form>
+        <div class="navbar-nav">
+          <a class="nav-item nav-link" href="/login">Login</a>
+          <a class="nav-item nav-link mr-4" href="/register">Register</a>
+        </div>
       <% } %>      
     </div>
   </nav>

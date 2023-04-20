@@ -120,14 +120,14 @@ app.post("/login", (req, res) => {
     res.redirect("/urls");
   } else {
     //error for incorrect credentials
-    res.status(401).send("Email / Password incorrect! Please try again");
+    res.status(403).send("Email / Password incorrect! Please try again");
   }
 });
 
 //POST request to logout
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 //route to show all the urls in db
