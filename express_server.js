@@ -1,6 +1,6 @@
 //Import express
 const express = require("express");
-
+const bcrypt = require("bcryptjs");
 const cookieParser = require('cookie-parser');
 
 
@@ -17,7 +17,7 @@ const urlDatabase = {
   b2xVn2: {
     longURL: "http://www.lighthouselabs.ca",
     userID: "Sf5gyU"
-  }, 
+  },
   s9m5xK: {
     longURL: "http://www.google.com",
     userID: "F6h75t"
@@ -99,7 +99,7 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   
   const { email, password } = req.body;
-
+  
   //error message if email/password is empty
   if (!email || !password) {
     res.status(400).send("Please enter both email and password to register");
@@ -108,25 +108,25 @@ app.post("/register", (req, res) => {
 
   // validation
   // Check if user exists? => look for that email
-  
   if (findUserByEmail(email, usersDb)) {
     //user exist
     res.status(400).send('Email address already in use!');
     return;
   }
+  //hash password
+  const salt = bcrypt.genSaltSync(10);
+  const hashPassword = bcrypt.hashSync(password, salt);
   
   const userId = generateRandomString();
-
+  //input email and hashed password into userdb
   usersDb[userId] = {
     id: userId,
     email,
-    password,
+    hashPassword,
   };
 
-  //set cookie
-  res.cookie("user_id", userId);
-  //redirect to /urls
-  res.redirect("/urls");
+  //redirect to /login to set cookie
+  res.redirect("/login");
 });
 
 //get login
@@ -150,20 +150,18 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  //validation if user exist
   const user = findUserByEmail(email, usersDb);
-
-  //check the paasword
-  if (user && user.password === password) {
-    //set cookie
-    res.cookie("user_id", user.id);
-
-    //redirect back to /urls
-    res.redirect("/urls");
-  } else {
+  // check if user exists / password is the same
+  if (!user || !(bcrypt.compareSync(password, user.hashPassword))) {
     //error for incorrect credentials
     res.status(403).send("Email / Password incorrect! Please try again");
+    return;
   }
+  //set cookie
+  res.cookie("user_id", user.id);
+
+  //redirect back to /urls
+  res.redirect("/urls");
 });
 
 //POST request to logout
@@ -232,7 +230,7 @@ app.get("/urls/:id", (req, res) => {
 
 // POST request to update longURL
 app.post("/urls/:id/", (req, res) => {
-  const currentUser = req.cookies["user_id"]
+  const currentUser = req.cookies["user_id"];
   const loggedInUser = usersDb[currentUser];
   if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
     res.send("Please log in to make changes to url");
@@ -252,7 +250,6 @@ app.post("/urls/:id/", (req, res) => {
 
 //redirect short urls
 app.get("/u/:id", (req, res) => {
-  
   //Edge case - if id doesn't exist
   if (!urlDatabase[req.params.id]) {
     res.status(302).send('No url with provided id in our database');
@@ -260,12 +257,12 @@ app.get("/u/:id", (req, res) => {
   }
   const longURL = urlDatabase[req.params.id].longURL;
   
-  res.redirect(longURL, {user: loggedInUser});
+  res.redirect(longURL, {user: null});
 });
 
 //POST request to delete url
 app.post("/urls/:id/delete", (req, res) => {
-  const currentUser = req.cookies["user_id"]
+  const currentUser = req.cookies["user_id"];
   const loggedInUser = usersDb[currentUser];
   if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
     res.send("Please log in to make changes to url");
