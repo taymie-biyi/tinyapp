@@ -1,7 +1,7 @@
 //Import express
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 
 
 const app = express();
@@ -10,7 +10,13 @@ const PORT = 8080; // default port 8080
 //set up ejs view engine
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['khfd', '2r5y', 'i6kv', 'e9sm', '4k0h'],
+
+  //Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
 
 //database object containing urls
 const urlDatabase = {
@@ -86,7 +92,7 @@ const urlsForUser = (id) => {
 
 //get register
 app.get("/register", (req, res) => {
-  const loggedInUser = usersDb[req.cookies["user_id"]];
+  const loggedInUser = usersDb[req.session.user_id];
   if (loggedInUser) {
     res.redirect("/urls");
     return;
@@ -131,7 +137,7 @@ app.post("/register", (req, res) => {
 
 //get login
 app.get("/login", (req, res) => {
-  const loggedInUser = usersDb[req.cookies["user_id"]];
+  const loggedInUser = usersDb[req.session.user_id];
   if (loggedInUser) {
     res.redirect("/urls");
     return;
@@ -158,7 +164,7 @@ app.post("/login", (req, res) => {
     return;
   }
   //set cookie
-  res.cookie("user_id", user.id);
+  req.session.user_id = user.id;
 
   //redirect back to /urls
   res.redirect("/urls");
@@ -166,14 +172,14 @@ app.post("/login", (req, res) => {
 
 //POST request to logout
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/login");
 });
 
 //route to show all the urls in db
 app.get("/urls", (req, res) => {
   //check if user is logged in
-  const currentUser = req.cookies["user_id"];
+  const currentUser = req.session.user_id;
   const loggedInUser = usersDb[currentUser];
 
   const templateVars = { urls: urlsForUser(currentUser), user: loggedInUser };
@@ -182,21 +188,21 @@ app.get("/urls", (req, res) => {
 
 //POST route to receive form and update url db
 app.post("/urls", (req, res) => {
-  const loggedInUser = usersDb[req.cookies["user_id"]];
+  const loggedInUser = usersDb[req.session.user_id];
   if (!loggedInUser) {
     res.send("Please login or register to shorten URL!!");
     return;
   }
-
   //generate random id
   const id = generateRandomString();
-  urlDatabase[id].longURL = req.body.longURL;
-  res.redirect(`/urls/${id}`);  //redirect to to new url
+  //Create a new url
+  urlDatabase[id] = {longURL: req.body.longURL, userID: req.session.user_id };
+  res.redirect(`/urls/${id}`);  //redirect to the new url
 });
 
 //get request to create a submission form for new url
 app.get("/urls/new", (req, res) => {
-  const loggedInUser = usersDb[req.cookies["user_id"]];
+  const loggedInUser = usersDb[req.session.user_id];
   if (!loggedInUser) {
     res.redirect("/login");
     return;
@@ -212,7 +218,7 @@ app.get("/urls/:id", (req, res) => {
     return;
   }
 
-  const currentUser = req.cookies["user_id"];
+  const currentUser = req.session.user_id;
   const loggedInUser = usersDb[currentUser];
   if (!loggedInUser) {
     res.redirect("/login");
@@ -230,7 +236,7 @@ app.get("/urls/:id", (req, res) => {
 
 // POST request to update longURL
 app.post("/urls/:id/", (req, res) => {
-  const currentUser = req.cookies["user_id"];
+  const currentUser = req.session.user_id;
   const loggedInUser = usersDb[currentUser];
   if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
     res.send("Please log in to make changes to url");
@@ -262,7 +268,7 @@ app.get("/u/:id", (req, res) => {
 
 //POST request to delete url
 app.post("/urls/:id/delete", (req, res) => {
-  const currentUser = req.cookies["user_id"];
+  const currentUser = req.session.user_id;
   const loggedInUser = usersDb[currentUser];
   if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
     res.send("Please log in to make changes to url");
