@@ -2,6 +2,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const cookieSession = require('cookie-session');
+const methodOverride = require('method-override')
 const { urlDatabase, usersDb, getUserByEmail, generateRandomString, urlsForUser } = require("./helper")
 
 const app = express();
@@ -10,6 +11,7 @@ const PORT = 8080; // default port 8080
 //set up ejs view engine
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride('_method'));
 app.use(cookieSession({
   name: 'session',
   keys: ['khfd', '2r5y', 'i6kv', 'e9sm', '4k0h'],
@@ -172,8 +174,8 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-// POST request to update longURL
-app.post("/urls/:id/", (req, res) => {
+// Method overide request to edit/update longURL
+app.put("/urls/:id/", (req, res) => {
 
   const currentUserID = req.session.user_id;
   const user = usersDb[currentUserID];
@@ -208,8 +210,8 @@ app.get("/u/:id", (req, res) => {
   res.redirect(longURL);
 });
 
-//POST request to delete url
-app.post("/urls/:id/delete", (req, res) => {
+//Method-overide request to delete url
+app.delete("/urls/:id/delete", (req, res) => {
   const shortUrl = req.params.id;
   const currentUserID = req.session.user_id;
   const user = usersDb[currentUserID];
