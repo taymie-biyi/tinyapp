@@ -2,7 +2,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const cookieSession = require('cookie-session');
-
+const { urlDatabase, usersDb, getUserByEmail, generateRandomString, urlsForUser } = require("./helper")
 
 const app = express();
 const PORT = 8080; // default port 8080
@@ -18,87 +18,19 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
-//database object containing urls
-const urlDatabase = {
-  b2xVn2: {
-    longURL: "http://www.lighthouselabs.ca",
-    userID: "Sf5gyU"
-  },
-  s9m5xK: {
-    longURL: "http://www.google.com",
-    userID: "F6h75t"
-  },
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW",
-  },
-  h8HG84: {
-    longURL: "https://www.instagram.com",
-    userID: "Sf5gyU"
-  }
-};
-
-//database of users
-const usersDb = {
-  Sf5gyU: {
-    id: "Sf5gyU",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
-  },
-  cD4nm0: {
-    id: "cD4nm0",
-    email: "user2@example.com",
-    password: "dishwasher-funk",
-  },
-};
-
-//Generate random 6char String
-const generateRandomString = () => {
-  let results = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const characterLength = characters.length;
-  for (let i = 0; i < 6; i++) {
-    results += characters.charAt(Math.floor(Math.random() * characterLength));
-  }
-  return results;
-};
-
-//check if user exists function
-const findUserByEmail = (email, usersDb) => {
-  for (let userId in usersDb) {
-    if (usersDb[userId].email === email) {
-      return usersDb[userId];
-    }
-  }
-  return false;
-};
-
-//check for current user's urls
-const urlsForUser = (id) => {
-  const userUrls = {};
-  for (let urlId in urlDatabase) {
-    if (urlDatabase[urlId].userID === id) {
-      userUrls[urlId] = urlDatabase[urlId].longURL;
-    }
-  }
-  return userUrls;
-};
-
-//ADD ROUTES
+// ROUTES
 
 //get register
 app.get("/register", (req, res) => {
-  const loggedInUser = usersDb[req.session.user_id];
-  if (loggedInUser) {
+  let user = usersDb[req.session.user_id];
+  if (user) {
     res.redirect("/urls");
     return;
+  } else {
+    user = null;
   }
   
-  res.render("register", {user: null});
+  res.render("register", { user });
 });
 
 //POST request to register
@@ -114,7 +46,7 @@ app.post("/register", (req, res) => {
 
   // validation
   // Check if user exists? => look for that email
-  if (findUserByEmail(email, usersDb)) {
+  if (getUserByEmail(email, usersDb)) {
     //user exist
     res.status(400).send('Email address already in use!');
     return;
@@ -137,12 +69,14 @@ app.post("/register", (req, res) => {
 
 //get login
 app.get("/login", (req, res) => {
-  const loggedInUser = usersDb[req.session.user_id];
-  if (loggedInUser) {
+  let user = usersDb[req.session.user_id];
+  if (user) {
     res.redirect("/urls");
     return;
+  } else{
+    user = null;
   }
-  res.render("login", {user: null});
+  res.render("login", { user });
 });
 
 // POST request to set cookie for username & login
@@ -156,7 +90,7 @@ app.post("/login", (req, res) => {
     return;
   }
 
-  const user = findUserByEmail(email, usersDb);
+  const user = getUserByEmail(email, usersDb);
   // check if user exists / password is the same
   if (!user || !(bcrypt.compareSync(password, user.hashPassword))) {
     //error for incorrect credentials
@@ -179,77 +113,84 @@ app.post("/logout", (req, res) => {
 //route to show all the urls in db
 app.get("/urls", (req, res) => {
   //check if user is logged in
-  const currentUser = req.session.user_id;
-  const loggedInUser = usersDb[currentUser];
+  const currentUserID = req.session.user_id;
+  const user = usersDb[currentUserID];
+  const urls = urlsForUser(currentUserID);
 
-  const templateVars = { urls: urlsForUser(currentUser), user: loggedInUser };
+  const templateVars = { urls, user, };
   res.render("urls_index", templateVars);
 });
 
 //POST route to receive form and update url db
 app.post("/urls", (req, res) => {
-  const loggedInUser = usersDb[req.session.user_id];
-  if (!loggedInUser) {
+  const userID = req.session.user_id;
+  const user = usersDb[userID];
+  const longURL = req.body.longURL;
+  if (!user) {
     res.send("Please login or register to shorten URL!!");
     return;
   }
   //generate random id
   const id = generateRandomString();
   //Create a new url
-  urlDatabase[id] = {longURL: req.body.longURL, userID: req.session.user_id };
+  urlDatabase[id] = {longURL, userID, };
   res.redirect(`/urls/${id}`);  //redirect to the new url
 });
 
 //get request to create a submission form for new url
 app.get("/urls/new", (req, res) => {
-  const loggedInUser = usersDb[req.session.user_id];
-  if (!loggedInUser) {
+  const user = usersDb[req.session.user_id];
+  if (!user) {
     res.redirect("/login");
     return;
   }
   
-  res.render("urls_new", {user: loggedInUser});
+  res.render("urls_new", {user});
 });
 
 //route to display each URL and its shortened form based on its id
 app.get("/urls/:id", (req, res) => {
-  if (!urlDatabase[req.params.id]) {
+  const shortUrl = req.params.id;
+  if (!urlDatabase[shortUrl]) {
     res.status(302).send('No url with provided id in our database');
     return;
   }
 
-  const currentUser = req.session.user_id;
-  const loggedInUser = usersDb[currentUser];
-  if (!loggedInUser) {
+  const currentUserID = req.session.user_id;
+  const user = usersDb[currentUserID];
+  if (!user) {
     res.redirect("/login");
     return;
   }
 
-  if (urlDatabase[req.params.id].userID !== currentUser) {
+  if (urlDatabase[shortUrl].userID !== currentUserID) {
     res.send("Please log in to access url");
     return;
   }
-  const longURL = urlDatabase[req.params.id].longURL;
-  const templateVars = { id: req.params.id, longURL: longURL, user: loggedInUser };
+  const longURL = urlDatabase[shortUrl].longURL;
+  const templateVars = { id: shortUrl, longURL, user };
   res.render("urls_show", templateVars);
 });
 
 // POST request to update longURL
 app.post("/urls/:id/", (req, res) => {
-  const currentUser = req.session.user_id;
-  const loggedInUser = usersDb[currentUser];
-  if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
+
+  const currentUserID = req.session.user_id;
+  const user = usersDb[currentUserID];
+  const shortUrl = req.params.id;
+
+  if (!user || (urlDatabase[shortUrl].userID !== currentUserID)) {
     res.send("Please log in to make changes to url");
     return;
   }
 
-  if (!urlDatabase[req.params.id]) {
+  if (!urlDatabase[shortUrl]) {
     res.status(302).send('No url with provided id in our database');
     return;
   }
 
-  if (req.body.longURL && urlDatabase[req.params.id].longURL !== req.body.longURL) {
-    urlDatabase[req.params.id].longURL = req.body.longURL;
+  if (req.body.longURL && urlDatabase[shortUrl].longURL !== req.body.longURL) {
+    urlDatabase[shortUrl].longURL = req.body.longURL;
   }
   res.redirect("/urls");
 });
@@ -257,30 +198,32 @@ app.post("/urls/:id/", (req, res) => {
 //redirect short urls
 app.get("/u/:id", (req, res) => {
   //Edge case - if id doesn't exist
-  if (!urlDatabase[req.params.id]) {
+  const shortUrl = req.params.id;
+  if (!urlDatabase[shortUrl]) {
     res.status(302).send('No url with provided id in our database');
     return;
   }
-  const longURL = urlDatabase[req.params.id].longURL;
+  const longURL = urlDatabase[shortUrl].longURL;
   
-  res.redirect(longURL, {user: null});
+  res.redirect(longURL);
 });
 
 //POST request to delete url
 app.post("/urls/:id/delete", (req, res) => {
-  const currentUser = req.session.user_id;
-  const loggedInUser = usersDb[currentUser];
-  if (!loggedInUser || (urlDatabase[req.params.id].userID !== currentUser)) {
+  const shortUrl = req.params.id;
+  const currentUserID = req.session.user_id;
+  const user = usersDb[currentUserID];
+  if (!user || (urlDatabase[shortUrl].userID !== currentUserID)) {
     res.send("Please log in to make changes to url");
     return;
   }
 
-  if (!urlDatabase[req.params.id]) {
+  if (!urlDatabase[shortUrl]) {
     res.status(302).send('No url with provided id in our database');
     return;
   }
 
-  delete urlDatabase[req.params.id];
+  delete urlDatabase[shortUrl];
   res.redirect("/urls/");
 });
 
